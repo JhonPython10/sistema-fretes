@@ -134,6 +134,20 @@
     <button onclick="calcular()">Calcular</button>
     <button onclick="salvar()">Salvar</button>
 
+    <button onclick="exportarBackup()">💾 Fazer Backup</button>
+
+    <button onclick="document.getElementById('arquivoBackup').click()">
+      📂 Restaurar Backup
+    </button>
+
+    <input
+      type="file"
+      id="arquivoBackup"
+      accept=".json"
+      onchange="restaurarBackup(event)"
+      style="display: none"
+    />
+
     <div id="resultado"></div>
 
     <h3>Mensagem para WhatsApp</h3>
@@ -654,6 +668,75 @@ R$ ${carro.toFixed(2)}
         localStorage.setItem('orcamentosV3', JSON.stringify(lista));
 
         listar();
+      }
+
+      function exportarBackup() {
+        let dados = localStorage.getItem('orcamentosV3');
+
+        if (!dados) {
+          alert('Nenhum orçamento para salvar.');
+          return;
+        }
+
+        let blob = new Blob([dados], { type: 'application/json' });
+
+        let link = document.createElement('a');
+
+        let data = new Date();
+
+        let nome =
+          'backup-fretes-' +
+          data.getFullYear() +
+          '-' +
+          String(data.getMonth() + 1).padStart(2, '0') +
+          '-' +
+          String(data.getDate()).padStart(2, '0') +
+          '.json';
+
+        link.href = URL.createObjectURL(blob);
+
+        link.download = nome;
+
+        link.click();
+
+        URL.revokeObjectURL(link.href);
+      }
+
+      function restaurarBackup(event) {
+        let arquivo = event.target.files[0];
+
+        if (!arquivo) return;
+
+        let leitor = new FileReader();
+
+        leitor.onload = function (e) {
+          try {
+            let dados = JSON.parse(e.target.result);
+
+            if (!Array.isArray(dados)) {
+              alert('Arquivo inválido.');
+              return;
+            }
+
+            if (
+              !confirm(
+                'Isso substituirá todos os orçamentos atuais. Continuar?',
+              )
+            ) {
+              return;
+            }
+
+            localStorage.setItem('orcamentosV3', JSON.stringify(dados));
+
+            listar();
+
+            alert('Backup restaurado com sucesso!');
+          } catch {
+            alert('Arquivo inválido.');
+          }
+        };
+
+        leitor.readAsText(arquivo);
       }
 
       // inicializa
