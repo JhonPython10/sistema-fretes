@@ -220,38 +220,25 @@
         <div id="areaAssistente" class="assistente-carga">
           <small><b>Assistente de Carga</b></small>
 
-          <!-- Menu de Seleção -->
           <select id="selItem" onchange="adicionarItemAssistente()">
             <option value="">+ Adicionar Item...</option>
           </select>
 
-          <!-- Botões de Gerenciamento -->
-          <div style="display: flex; gap: 5px; margin-top: 5px">
+          <div style="margin-top: 5px">
             <button
               onclick="abrirCadastroItem()"
               style="
                 font-size: 11px;
                 background: #666;
-                padding: 5px;
+                padding: 6px;
                 width: auto;
               "
             >
-              ➕ Novo Item
-            </button>
-            <button
-              onclick="excluirItemCadastrado()"
-              style="
-                font-size: 11px;
-                background: #d32f2f;
-                padding: 5px;
-                width: auto;
-              "
-            >
-              ✖ Excluir Selecionado
+              ➕ Cadastrar Novo Item
             </button>
           </div>
 
-          <!-- Formulário de Novo Item (Escondido) -->
+          <!-- FORMULÁRIO COM DICAS (PLACEHOLDERS) -->
           <div
             id="formNovoItem"
             style="
@@ -264,41 +251,65 @@
           >
             <input
               id="novoNome"
-              placeholder="Nome (ex: Cama)"
+              placeholder="Ex: Geladeira, Cama..."
               style="font-size: 12px; height: 30px; margin-bottom: 5px"
             />
             <input
               id="novoTempo"
               type="number"
-              placeholder="Minutos (ex: 15)"
+              placeholder="Minutos p/ carregar"
               style="font-size: 12px; height: 30px; margin-bottom: 5px"
             />
+
+            <label><small>Logística de Viagem:</small></label>
             <select
               id="novoTipo"
               style="font-size: 12px; height: 30px; margin-bottom: 5px"
             >
-              <option value="1">Item Grande (1 viagem)</option>
-              <option value="2">Caixas (2 por viagem)</option>
-              <option value="4">Sacolas (4 por viagem)</option>
+              <option value="1">1 Viagem por Item (Itens Grandes)</option>
+              <option value="2">2 Itens por Viagem (Ex: Caixas)</option>
+              <option value="4">4 Itens por Viagem (Ex: Sacolas)</option>
             </select>
             <button
               onclick="salvarNovoItem()"
               style="background: #2e7d32; margin-top: 5px; padding: 5px"
             >
-              Salvar Item
+              💾 Salvar Item
             </button>
           </div>
 
-          <!-- Lista de Itens Adicionados ao Orçamento -->
           <div id="listaItensAssistente" style="margin: 10px 0"></div>
 
-          <label><small>Lances de Escada (Total)</small></label>
-          <input
-            type="number"
-            id="lancesEscada"
-            value="0"
-            oninput="calcularTempoAssistente()"
-          />
+          <!-- CONFIGURAÇÃO DE ESCADA (COM SUPORTE A 1.5, 2.5, ETC) -->
+          <div
+            style="
+              display: flex;
+              gap: 10px;
+              margin-top: 10px;
+              border-top: 1px solid #ffe0b2;
+              padding-top: 10px;
+            "
+          >
+            <div style="flex: 1">
+              <label><small>Lances</small></label>
+              <input
+                type="number"
+                id="lancesEscada"
+                value="0"
+                oninput="calcularTempoAssistente()"
+              />
+            </div>
+            <div style="flex: 1">
+              <label><small>Min/Lance</small></label>
+              <input
+                type="number"
+                id="minutosPorLance"
+                step="0.1"
+                value="5"
+                oninput="calcularTempoAssistente()"
+              />
+            </div>
+          </div>
 
           <div
             style="
@@ -986,7 +997,6 @@
       function adicionarItemAssistente() {
         const id = el('selItem').value;
         if (!id) return;
-
         itensNoOrcamento.push(id);
         el('selItem').value = '';
         renderizarItensAssistente();
@@ -995,8 +1005,13 @@
       function renderizarItensAssistente() {
         let html = '';
         itensNoOrcamento.forEach((id, index) => {
-          html += `<div class="item-selecionado">
-            ${dbItens[id].nome} <span onclick="removerItemAssistente(${index})" style="color:red; cursor:pointer;">✖</span>
+          const item = dbItens[id];
+          if (!item) return;
+          html += `<div class="item-selecionado" style="display: flex; align-items: center; gap: 5px; margin-bottom: 8px; background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
+            <span style="flex: 1;"><b>${item.nome}</b></span>
+            <button onclick="preencherEdicaoItem('${id}')" style="width: 35px; padding: 5px; background: #fb8c00; margin: 0; font-size: 14px; border:none; border-radius:4px; color:white;">✏️</button>
+            <button onclick="excluirItemCadastrado('${id}')" style="width: 35px; padding: 5px; background: #d32f2f; margin: 0; font-size: 14px; border:none; border-radius:4px; color:white;">✖</button>
+            <button onclick="removerItemAssistente(${index})" style="width: 35px; padding: 5px; background: #666; margin: 0; font-size: 14px; border:none; border-radius:4px; color:white;" title="Remover do orçamento">🗑️</button>
           </div>`;
         });
         el('listaItensAssistente').innerHTML = html;
@@ -1008,41 +1023,58 @@
         renderizarItensAssistente();
       }
 
+      function abrirCadastroItem() {
+        const form = el('formNovoItem');
+        form.style.display = form.style.display === 'block' ? 'none' : 'block';
+      }
+
+      function preencherEdicaoItem(id) {
+        const item = dbItens[id];
+        el('novoNome').value = item.nome;
+        el('novoTempo').value = item.tempo;
+        el('novoTipo').value = item.divisor || 1;
+        el('formNovoItem').style.display = 'block';
+        // Removido o scroll automático para não pular a tela
+      }
+
+      function excluirItemCadastrado(id) {
+        if (
+          confirm(`Excluir "${dbItens[id].nome}" permanentemente do sistema?`)
+        ) {
+          delete dbItens[id];
+          localStorage.setItem('dbItensFretes', JSON.stringify(dbItens));
+          atualizarSelectItens();
+          renderizarItensAssistente();
+        }
+      }
+
       function calcularTempoAssistente() {
         let tempoTotalMin = 0;
         let totalViagens = 0;
         let contagem = {};
 
-        // Conta quantos de cada item
         itensNoOrcamento.forEach(
           (id) => (contagem[id] = (contagem[id] || 0) + 1),
         );
 
         for (let id in contagem) {
           const item = dbItens[id];
-          let viagensDoItem = 0;
-
-          if (item.divisor) {
-            viagensDoItem = Math.ceil(contagem[id] / item.divisor);
-          } else {
-            viagensDoItem = contagem[id];
-          }
-
+          if (!item) continue;
+          let viagensDoItem = item.divisor
+            ? Math.ceil(contagem[id] / item.divisor)
+            : contagem[id];
           tempoTotalMin += viagensDoItem * item.tempo;
           totalViagens += viagensDoItem;
         }
 
-        // Adiciona tempo de escada: 1,5 min por lance para CADA viagem
-        const lances = parseInt(el('lancesEscada').value) || 0;
-        tempoTotalMin += totalViagens * lances * 1,7;
+        // CÁLCULO DA ESCADA COM MULTIPLICADOR MANUAL
+        // Agora usando parseFloat para aceitar números decimais (ex: 1.5)
+        const lances = parseFloat(el('lancesEscada').value) || 0;
+        const minPorLance = parseFloat(el('minutosPorLance').value) || 0;
+        tempoTotalMin += totalViagens * lances * minPorLance;
 
         el('tempoEstimadoAssistente').innerText = tempoTotalMin;
-
-        // Converte para horas e preenche o campo principal
-        const horas = (tempoTotalMin / 60).toFixed(2);
-        el('carga').value = horas;
-
-        // Dispara o cálculo geral do frete
+        el('carga').value = (tempoTotalMin / 60).toFixed(2);
         if (typeof calcular === 'function') calcular();
       }
 
@@ -1091,6 +1123,37 @@
           atualizarSelectItens();
         }
       }
+
+      function preencherEdicaoPeloMenu() {
+        const id = el('selItem').value;
+        if (!id) return alert('Selecione um item no menu acima primeiro!');
+        const item = dbItens[id];
+        el('novoNome').value = item.nome;
+        el('novoTempo').value = item.tempo;
+        el('novoTipo').value = item.divisor || 1;
+        el('formNovoItem').style.display = 'block';
+      }
+
+      function excluirPeloMenu() {
+        const id = el('selItem').value;
+        if (!id) return alert('Selecione um item no menu acima primeiro!');
+        if (confirm(`Excluir "${dbItens[id].nome}" permanentemente?`)) {
+          delete dbItens[id];
+          localStorage.setItem('dbItensFretes', JSON.stringify(dbItens));
+          atualizarSelectItens();
+        }
+      }
+
+      // Ajuste na função de adicionar para não dar erro ao gerenciar
+      const originalAdicionar = adicionarItemAssistente;
+      adicionarItemAssistente = function () {
+        const id = el('selItem').value;
+        if (!id) return;
+        // Se o formulário de edição estiver aberto, não adiciona ao orçamento
+        if (el('formNovoItem').style.display === 'block') return;
+        originalAdicionar();
+      };
+
       // ---------------------------------------
 
       // Bloquear alteração de valor no scroll do mouse
