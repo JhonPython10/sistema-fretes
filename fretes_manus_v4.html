@@ -1032,9 +1032,9 @@
           totalViagens += viagensDoItem;
         }
 
-        // Adiciona tempo de escada: 5 min por lance para CADA viagem
+        // Adiciona tempo de escada: 1,5 min por lance para CADA viagem
         const lances = parseInt(el('lancesEscada').value) || 0;
-        tempoTotalMin += totalViagens * lances * 5;
+        tempoTotalMin += totalViagens * lances * 1,7;
 
         el('tempoEstimadoAssistente').innerText = tempoTotalMin;
 
